@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <bcm2835.h>
-#include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include "Adafruit_BME280.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
@@ -187,10 +187,65 @@ int SetPlugState(int number, bool state)
 	return 0;	
 } 
  
-int main()
+const char *
+parse_date (const char *input, struct tm *tm)
+{
+  const char *cp;
+
+  /* First clear the result structure.  */
+  memset (tm, '\0', sizeof (*tm));
+
+  /* Try the ISO format first.  */
+  cp = strptime (input, "%H:%M", tm);
+
+  return cp;
+}
+ 
+int main(int argc, const char * argv[])
 {
     Adafruit_BME280 bme;
+    bool state = false;
+    double maxHumidity = 50;
+    double minHumidity = 45;
+    struct tm timeStart, timeStop;
+    
+    int onTime = 0;
+    
+    timeStart.tm_hour = 23;
+    timeStart.tm_min = 30;
+    timeStop.tm_hour = 6;
+    timeStop.tm_min = 30;
 
+ 	fprintf(stderr, "DeHumid Version: 1.0.0\n");
+ 	fprintf(stderr, "Copyright Shaun Simpson 2016\n\n");
+
+    if (argc > 2) {
+		minHumidity = atof(argv[1]);
+		maxHumidity = atof(argv[2]);
+    }
+    
+    if (argc > 4) {
+        struct tm time;
+        if (parse_date(argv[3], &time) == NULL) {
+           	fprintf(stderr, "Failed to parse start time: %s\n", argv[3]);
+        }
+        else {
+            timeStart = time;
+        }
+        
+        if (parse_date(argv[4], &time) == NULL) {
+           	fprintf(stderr, "Failed to parse stop time: %s\n", argv[4]);
+        }
+        else {
+            timeStop = time;
+        }
+        
+    }
+
+	printf("Min humidity set to %.1f\n", minHumidity);
+	printf("Max humidity set to %.1f\n", maxHumidity);
+    fprintf(stdout, "Start time set to %2d:%2d\n", timeStart.tm_hour, timeStart.tm_min);
+    fprintf(stdout, "Stop time set to %2d:%2d\n\n", timeStop.tm_hour, timeStop.tm_min);
     
 	if (InitPlugs())
 	{
@@ -201,29 +256,56 @@ int main()
     SetPlugState(1, false);   
     
     if (bme.begin(BME280_ADDRESS, "/dev/i2c-1")) {
+        /* Give sensor some time. */
+        usleep(100000);
+        SetPlugState(1, state);   
+    
         while (true) {
             time_t rawtime;
             struct tm * timeinfo;
 
             time (&rawtime);
             timeinfo = localtime (&rawtime);
-            printf("%2d:%2d: ", timeinfo->tm_hour, timeinfo->tm_min);
+            fprintf(stdout, "%2d:%2d: ", timeinfo->tm_hour, timeinfo->tm_min);
 
-            printf("Temperature = %.2f *C\t", bme.readTemperature());
-            printf("Pressure = %.2f hPa\t", bme.readPressure() / 100.0F);
-            printf("Approx. Altitude = %.2f m\t", bme.readAltitude(SEALEVELPRESSURE_HPA));
+            fprintf(stdout, "Temperature = %.2f *C\t", bme.readTemperature());
+            fprintf(stdout, "Pressure = %.2f hPa\t", bme.readPressure() / 100.0F);
+            fprintf(stdout, "Approx. Altitude = %.2f m\t", bme.readAltitude(SEALEVELPRESSURE_HPA));
             double humidity = bme.readHumidity();
-            printf("Humidity = %.2f %\n\n", humidity);
+            fprintf(stdout, "Humidity = %.2f %\n", humidity);
+            
+            int tMin = timeinfo->tm_hour * 60 + timeinfo->tm_min;
            
-            if ((timeinfo->tm_hour > 16) && (timeinfo->tm_hour < 17)) {
-                if (humidity > 50) {
-                    SetPlugState(1, true);   
+            /* Control if time between Start and Stop */
+            if ((tMin >= timeStart.tm_hour*60+timeStart.tm_min) || (tMin < timeStop.tm_hour*60+timeStop.tm_min)) {
+                if (humidity > maxHumidity) {
+                    if (state != true) {
+                        state = true;
+                        SetPlugState(1, state);   
+                        fprintf(stdout, "%2d:%2d: Turned ON\n", timeinfo->tm_hour, timeinfo->tm_min);
+                    }
                 }
-                else {
-                    SetPlugState(1, false);   
+                else if (humidity < minHumidity) {
+                    if (state != false) {
+                        state = false;
+                        SetPlugState(1, state);   
+                        fprintf(stdout, "%2d:%2d: Turned OFF\n", timeinfo->tm_hour, timeinfo->tm_min);
+                    }
                 };
             }
+            else if (state) {
+                state = false;
+                SetPlugState(1, state);   
+            }
             
+            if (state) {
+                onTime += 600;
+                if (onTime % 3600 == 0) {
+                    fprintf(stdout, "%2d:%2d: Total on time: %d hours\n", timeinfo->tm_hour, timeinfo->tm_min, onTime/3600);
+                }
+            }
+            
+            fflush(stdout);
             sleep(600);
          }
     }  
