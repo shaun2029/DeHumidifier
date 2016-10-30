@@ -6,9 +6,10 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdint.h>
-#include "Adafruit_BME280.h"
 #include <bcm2835.h>
 #include <stdio.h>
+#include <time.h>
+#include "Adafruit_BME280.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -201,21 +202,29 @@ int main()
     
     if (bme.begin(BME280_ADDRESS, "/dev/i2c-1")) {
         while (true) {
+            time_t rawtime;
+            struct tm * timeinfo;
+
+            time (&rawtime);
+            timeinfo = localtime (&rawtime);
+            printf("%2d:%2d: ", timeinfo->tm_hour, timeinfo->tm_min);
+
             printf("Temperature = %.2f *C\t", bme.readTemperature());
             printf("Pressure = %.2f hPa\t", bme.readPressure() / 100.0F);
             printf("Approx. Altitude = %.2f m\t", bme.readAltitude(SEALEVELPRESSURE_HPA));
             double humidity = bme.readHumidity();
             printf("Humidity = %.2f %\n\n", humidity);
-
-            
-            if (humidity > 50) {
-                SetPlugState(1, true);   
+           
+            if ((timeinfo->tm_hour > 16) && (timeinfo->tm_hour < 17)) {
+                if (humidity > 50) {
+                    SetPlugState(1, true);   
+                }
+                else {
+                    SetPlugState(1, false);   
+                };
             }
-            else {
-                SetPlugState(1, false);   
-            };
-
-            sleep(10);
+            
+            sleep(600);
          }
     }  
     
