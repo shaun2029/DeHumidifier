@@ -1,3 +1,13 @@
+/* bcm2835.h
+  
+   Dehumidifier control using BME280 and the 
+   Energinie ENER314 RASPBERRY P I RF- TRANSMITTER BOARD
+  
+   Author: Shaun Simpson
+   Copyright (C) 2016 Shaun Simpson
+*/
+
+
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -216,8 +226,7 @@ int main(int argc, const char * argv[])
     timeStop.tm_hour = 6;
     timeStop.tm_min = 30;
 
- 	fprintf(stderr, "DeHumid Version: 1.0.0\n");
- 	fprintf(stderr, "Copyright Shaun Simpson 2016\n\n");
+ 	fprintf(stderr, "DeHumid Version: 1.0.1\n");
 
     if (argc > 2) {
 		minHumidity = atof(argv[1]);
@@ -298,15 +307,15 @@ int main(int argc, const char * argv[])
                 SetPlugState(1, state);   
             }
             
-            if (state) {
-                onTime += 600;
-                if (onTime % 3600 == 0) {
-                    fprintf(stdout, "%2d:%2d: Total on time: %d hours\n", timeinfo->tm_hour, timeinfo->tm_min, onTime/3600);
-                }
-            }
-            
             fflush(stdout);
             sleep(600);
+
+            if (state) {
+                onTime += 600;
+                if (onTime % 1800 == 0) {
+                    fprintf(stdout, "%2d:%2d: Total on time: %.1f hours\n", timeinfo->tm_hour, timeinfo->tm_min, onTime/3600.0);
+                }
+            }
          }
     }  
     
