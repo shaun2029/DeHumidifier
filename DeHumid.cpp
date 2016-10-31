@@ -305,6 +305,7 @@ int main(int argc, const char * argv[])
             else if (state) {
                 state = false;
                 SetPlugState(1, state);   
+                fprintf(stdout, "%2d:%2d: Turned OFF\n", timeinfo->tm_hour, timeinfo->tm_min);
             }
             
             fflush(stdout);
