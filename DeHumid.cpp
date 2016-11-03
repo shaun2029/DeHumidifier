@@ -31,9 +31,9 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdint.h>
-#include <bcm2835.h>
 #include <time.h>
 #include <string.h>
+#include "bcm2835.h"
 #include "Adafruit_BME280.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
@@ -44,6 +44,31 @@
 #define GPIO27 RPI_V2_GPIO_P1_13
 #define GPIO24 RPI_V2_GPIO_P1_18
 #define GPIO25 RPI_V2_GPIO_P1_22
+
+/* Loop time in seconds. */
+#define LOOP_TIME 300
+
+/* Store two weeks results. */
+#define MAX_RESULTS 12 * 24 * 14
+
+struct SensorResult {
+    int index;
+    struct tm time;
+    time_t timestamp;
+    bool state;
+    double temprature;
+    double pressure;
+    double humidity;
+} __attribute__((__packed__));
+
+struct Data {
+    int32_t total;
+    uint64_t count;
+    uint32_t onTime;
+    struct SensorResult results[MAX_RESULTS];
+} __attribute__((__packed__));
+
+struct Data data;
 
 /*
  * "OUT OF THE BOX: Plug the Pi Transmitter board into the Raspberry Pi"
@@ -206,7 +231,9 @@ int SetPlugState(int number, bool state)
 	    /* keep enabled for a period */
         usleep(250000);
 	    /* Disable the modulator */
-	    bcm2835_gpio_write(GPIO25, LOW);    
+	    bcm2835_gpio_write(GPIO25, LOW);   
+	    
+	    sleep(1); 
     }
     
 	return 0;	
@@ -233,15 +260,14 @@ int main(int argc, const char * argv[])
     double maxHumidity = 50;
     double minHumidity = 45;
     struct tm timeStart, timeStop;
-    
-    int onTime = 0;
+
+ 	fprintf(stderr, "DeHumid Version: 1.1.0\n");
     
     timeStart.tm_hour = 23;
     timeStart.tm_min = 30;
     timeStop.tm_hour = 6;
     timeStop.tm_min = 30;
 
- 	fprintf(stderr, "DeHumid Version: 1.0.1\n");
 
     if (argc > 2) {
 		minHumidity = atof(argv[1]);
@@ -273,12 +299,39 @@ int main(int argc, const char * argv[])
     
 	if (InitPlugs())
 	{
-       	 	perror("Failed to initialise plug GPIO control.\n");
-        	return -1;
+   	 	perror("Failed to initialise plug GPIO control.\n");
+    	return -1;
    	}
 
     SetPlugState(1, false);   
-    
+
+    FILE *fd = fopen("dehumid.data", "rb");
+    int bytes = 0;
+
+    if (fd) {
+ 	    fprintf(stdout, "Loading results ... ");
+        bytes = fread(&data, sizeof(struct Data), 1, fd);
+        
+        if ((bytes == 1) && (data.total == MAX_RESULTS)) {
+ 	        fprintf(stdout, "success\n");
+        }
+        else {
+ 	        fprintf(stdout, "failed bytes read %d, total %d\n", bytes, data.total);
+        }
+        
+        fclose(fd);
+    }
+
+    if ((bytes != 1) || (data.total != MAX_RESULTS)) {
+        /* Initialize results. */
+        memset(&data.total, 0, sizeof(struct Data));  
+        data.total = MAX_RESULTS;
+
+        for (int d = 0; d < MAX_RESULTS; d++) {
+            data.results[d].index = -1;
+        }            
+    }
+
     if (bme.begin(BME280_ADDRESS, "/dev/i2c-1")) {
         /* Give sensor some time. */
         usleep(100000);
@@ -288,28 +341,37 @@ int main(int argc, const char * argv[])
             time_t rawtime;
             struct tm * timeinfo;
 
+            /* Get the index of the oldest result. */
+            int i = data.count % MAX_RESULTS;
+            
             time (&rawtime);
             timeinfo = localtime (&rawtime);
             fprintf(stdout, "%2d:%2d: ", timeinfo->tm_hour, timeinfo->tm_min);
 
-            fprintf(stdout, "Temperature = %.2f *C\t", bme.readTemperature());
-            fprintf(stdout, "Pressure = %.2f hPa\t", bme.readPressure() / 100.0F);
-            fprintf(stdout, "Approx. Altitude = %.2f m\t", bme.readAltitude(SEALEVELPRESSURE_HPA));
-            double humidity = bme.readHumidity();
-            fprintf(stdout, "Humidity = %.2f %\n", humidity);
+            /* Record result. */           
+            data.results[i].index = data.count;
+            data.results[i].time = *timeinfo;
+            data.results[i].timestamp = rawtime;
+            data.results[i].temprature = bme.readTemperature();
+            data.results[i].pressure = bme.readPressure() / 100.0F;
+            data.results[i].humidity = bme.readHumidity();          
+            
+            fprintf(stdout, "Temperature = %.2f *C\t", data.results[i].temprature);
+            fprintf(stdout, "Pressure = %.2f hPa\t", data.results[i].pressure);
+            fprintf(stdout, "Humidity = %.2f\n", data.results[i].humidity);
             
             int tMin = timeinfo->tm_hour * 60 + timeinfo->tm_min;
            
             /* Control if time between Start and Stop */
             if ((tMin >= timeStart.tm_hour*60+timeStart.tm_min) || (tMin < timeStop.tm_hour*60+timeStop.tm_min)) {
-                if (humidity > maxHumidity) {
+                if (data.results[i].humidity > maxHumidity) {
                     if (state != true) {
                         state = true;
                         SetPlugState(1, state);   
                         fprintf(stdout, "%2d:%2d: Turned ON\n", timeinfo->tm_hour, timeinfo->tm_min);
                     }
                 }
-                else if (humidity < minHumidity) {
+                else if (data.results[i].humidity < minHumidity) {
                     if (state != false) {
                         state = false;
                         SetPlugState(1, state);   
@@ -324,14 +386,87 @@ int main(int argc, const char * argv[])
             }
             
             fflush(stdout);
-            sleep(600);
+            sleep(LOOP_TIME);
 
             if (state) {
-                onTime += 600;
-                if (onTime % 1800 == 0) {
-                    fprintf(stdout, "%2d:%2d: Total on time: %.1f hours\n", timeinfo->tm_hour, timeinfo->tm_min, onTime/3600.0);
+                data.onTime += LOOP_TIME;
+                if (data.onTime % 1800 == 0) {
+                    fprintf(stdout, "%2d:%2d: Total on time: %.1f hours\n", timeinfo->tm_hour, timeinfo->tm_min, data.onTime/3600.0);
                 }
             }
+            
+            data.results[i].state = state;
+            data.count++;
+            
+            FILE *fileRead, *fileWrite;
+            char line[4096];
+
+            fileRead = fopen("results_template.html", "r");
+            
+            if (!fileRead) {
+                fprintf(stderr, "ERROR: Failed to open 'results_template.html' for reading!\n");
+                return 1;
+            }
+            else {
+                fileWrite = fopen("results.html", "w+");
+                
+                while (fgets(line, sizeof(line), fileRead)) {
+                    /* note that fgets does not strip the terminating \n, checking its
+                     * presence would allow to handle lines longer that sizeof(line) */
+                    
+                    if (strstr(line, "<sensordata/>")) {
+                        fprintf(fileWrite, "var temprature = [");
+                        for (int d = i+1; d < MAX_RESULTS; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].temprature);
+                            }
+                        }            
+                        for (int d = 0; d < i; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].temprature);
+                            }
+                        }            
+                        fprintf(fileWrite, "];\n");
+
+                        fprintf(fileWrite, "var pressure = [");
+                        for (int d = i+1; d < MAX_RESULTS; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].pressure);
+                            }
+                        }            
+                        for (int d = 0; d < i; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].pressure);
+                            }
+                        }            
+                        fprintf(fileWrite, "];\n");
+                        
+                        fprintf(fileWrite, "var humidity = [");
+                        for (int d = i+1; d < MAX_RESULTS; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].humidity);
+                            }
+                        }            
+                        for (int d = 0; d < i; d++) {
+                            if (data.results[d].index >= 0) {
+                                fprintf(fileWrite, "[%ld000,%f],", data.results[d].timestamp, data.results[d].humidity);
+                            }
+                        }            
+                        fprintf(fileWrite, "];\n");
+                    }
+                    else {
+                        fprintf(fileWrite, "%s", line); 
+                    }
+                }
+                
+                fclose(fileRead);
+            }
+            fclose(fileWrite);
+            
+            /* Save Results. */
+            fd = fopen("dehumid.data", "wb");
+            fwrite(&data, sizeof(struct Data), 1 , fd);            
+            fclose(fd);           
          }
     }  
     

@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Flot Examples: Canvas text</title>
+	<link href="examples.css" rel="stylesheet" type="text/css">
+	<!--[if lte IE 8]><script language="javascript" type="text/javascript" src="excanvas.min.js"></script><![endif]-->
+	<script language="javascript" type="text/javascript" src="/javascript/flot/jquery.js"></script>
+	<script language="javascript" type="text/javascript" src="/javascript/flot/jquery.flot.js"></script>
+	<script language="javascript" type="text/javascript" src="/javascript/flot/jquery.flot.time.js"></script>
+	<script language="javascript" type="text/javascript" src="/javascript/flot/jquery.flot.canvas.js"></script>
+	<script type="text/javascript">
+
+	$(function() {
+
+<sensordata/>
+
+		var data = [
+			{ data: temprature, label: "Temprature" },
+			{ data: pressure, label: "pressure", yaxis: 2 },
+			{ data: humidity, label: "Humidity", yaxis: 3 }
+		];
+
+		var options = {
+			canvas: true,
+			xaxes: [ { mode: "time"	} ],
+			yaxes: [ {
+				position: "left",
+				alignTicksWithAxis: 1,
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "C";
+					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + " hP";
+					}
+				},
+				{ 
+				position: "left",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "%";
+					}
+				}
+			],
+			legend: { position: "sw" }
+		}
+
+		var optionsHour = {
+			canvas: true,
+			xaxes: [ { mode: "time", 
+				min: (new Date()).getTime() - 1*60*60*1000,
+                                max: (new Date()).getTime()
+			} ],
+			yaxes: [ {
+				position: "left",
+				alignTicksWithAxis: 1,
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "C";
+					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + " hP";
+					}
+				},
+				{ 
+				position: "left",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "%";
+					}
+				}
+			],
+			legend: { position: "sw" }
+		}
+
+		var optionsDay = {
+			canvas: true,
+			xaxes: [ { mode: "time", 
+				min: (new Date()).getTime() - 24*60*60*1000,
+                                max: (new Date()).getTime()
+			} ],
+			yaxes: [ {
+				position: "left",
+				alignTicksWithAxis: 1,
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "C";
+					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + " hP";
+					}
+				},
+				{ 
+				position: "left",
+				tickFormatter: function(value, axis) {
+					return value.toFixed(axis.tickDecimals) + "%";
+					}
+				}
+			],
+			legend: { position: "sw" }
+		}
+
+		$.plot("#placeholder", data, options);
+
+                $("#whole").click(function () {
+			$.plot("#placeholder", data, options)
+		});
+
+                $("#day").click(function () {
+			$.plot("#placeholder", data, optionsDay)
+		});
+
+                $("#hour").click(function () {
+			$.plot("#placeholder", data, optionsHour)
+		});
+
+		$("input").change(function () {
+			options.canvas = $(this).is(":checked");
+			$.plot("#placeholder", data, options);
+		});
+
+		// Add the Flot version string to the footer
+
+		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
+	});
+
+	</script>
+</head>
+<body>
+
+	<div id="header">
+		<h2>Pi Sensor Data</h2>
+	</div>
+
+	<div id="content">
+
+		<div class="demo-container">
+			<div id="placeholder" class="demo-placeholder"></div>
+		</div>
+
+		<p>Pressure, temprature and humidity captured by a Raspberry Pi and BME280 sensor. Sudden drops in humidity relate to the dehumidifyer on times.</p>
+
+                <p>Zoom to: <button id="whole">Whole period</button>
+                <button id="day">Last day</button>
+                <button id="hour">Last hour</button>
+	</div>
+
+	<div id="footer">
+		Copyright &copy; 2007 - 2014 IOLA and Ole Laursen
+	</div>
+
+</body>
+</html>
