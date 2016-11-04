@@ -49,7 +49,7 @@
 #define LOOP_TIME 300
 
 /* Store two weeks results. */
-#define MAX_RESULTS 12 * 24 * 14
+#define MAX_RESULTS 4032
 
 struct SensorResult {
     int index;
