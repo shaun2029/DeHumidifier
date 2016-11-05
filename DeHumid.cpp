@@ -386,7 +386,6 @@ int main(int argc, const char * argv[])
             }
             
             fflush(stdout);
-            sleep(LOOP_TIME);
 
             if (state) {
                 data.onTime += LOOP_TIME;
@@ -467,6 +466,8 @@ int main(int argc, const char * argv[])
             fd = fopen("dehumid.data", "wb");
             fwrite(&data, sizeof(struct Data), 1 , fd);            
             fclose(fd);           
+
+            sleep(LOOP_TIME);
          }
     }  
     
