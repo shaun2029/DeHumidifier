@@ -22,6 +22,13 @@
     along with DeHumidifier.  If not, see <http://www.gnu.org/licenses/>.   
 */
 
+/*
+    Compile:
+    g++ -O2 DeHumid.cpp Adafruit_BME280.cpp -lbcm2835 -o dehumid 
+    
+    Dependencies: flot, BCM280 sensor, libbcm2835
+*/
+
 
 #include <unistd.h>
 #include <errno.h>
@@ -261,7 +268,7 @@ int main(int argc, const char * argv[])
     double minHumidity = 45;
     struct tm timeStart, timeStop;
 
- 	fprintf(stderr, "DeHumid Version: 1.1.0\n");
+ 	fprintf(stderr, "DeHumid Version: 1.2.0\n");
     
     timeStart.tm_hour = 23;
     timeStart.tm_min = 30;
@@ -289,7 +296,6 @@ int main(int argc, const char * argv[])
         else {
             timeStop = time;
         }
-        
     }
 
 	printf("Min humidity set to %.1f\n", minHumidity);
@@ -305,24 +311,42 @@ int main(int argc, const char * argv[])
 
     SetPlugState(1, false);   
 
-    FILE *fd = fopen("dehumid.data", "rb");
-    int bytes = 0;
+    bool loadedResults = false;
+    FILE *fd;
 
-    if (fd) {
- 	    fprintf(stdout, "Loading results ... ");
-        bytes = fread(&data, sizeof(struct Data), 1, fd);
-        
-        if ((bytes == 1) && (data.total == MAX_RESULTS)) {
- 	        fprintf(stdout, "success\n");
+    for (int f = 0; f < 2; f++) {
+        if (f == 0){
+   	        fprintf(stdout, "Loading results ... ");
+            fd = fopen("dehumid.data", "rb");
+                
+        }
+     	else {
+   	        fprintf(stdout, "Loading backup results ... ");
+            fd = fopen("dehumid.data.backup", "rb");
+   	    }
+
+        if (fd) {
+            /* Read struct as 1 record and validate using total. */
+            if ((fread(&data, sizeof(struct Data), 1, fd) == 1) && (data.total == MAX_RESULTS)) {
+                loadedResults = true;
+     	        fprintf(stdout, "success\n");
+            }
+            else {
+     	        fprintf(stdout, "failed - results corrupt?\n");
+            }
+            
+            fclose(fd);
         }
         else {
- 	        fprintf(stdout, "failed bytes read %d, total %d\n", bytes, data.total);
+ 	        fprintf(stdout, "failed to find file\n");
         }
-        
-        fclose(fd);
+
+        if (loadedResults) {
+            break;
+        }
     }
 
-    if ((bytes != 1) || (data.total != MAX_RESULTS)) {
+    if (!loadedResults) {
         /* Initialize results. */
         memset(&data.total, 0, sizeof(struct Data));  
         data.total = MAX_RESULTS;
@@ -332,7 +356,14 @@ int main(int argc, const char * argv[])
         }            
     }
 
-    if (bme.begin(BME280_ADDRESS, "/dev/i2c-1")) {
+    /* Initialise BME280 sensor using address 0x77 or 0x76 on /dev/i2c-1 */
+    bool bme280Success =  bme.begin(BME280_ADDRESS, "/dev/i2c-1"));
+
+    if (!bme280Success) {
+        bme.begin(BME280_ADDRESS2, "/dev/i2c-1");
+    }
+
+    if (bme280Success) {
         /* Give sensor some time. */
         usleep(100000);
         SetPlugState(1, state);   
@@ -462,8 +493,15 @@ int main(int argc, const char * argv[])
             }
             fclose(fileWrite);
             
-            /* Save Results. */
-            fd = fopen("dehumid.data", "wb");
+            /* Save Results. Alternate between .data and .backup*/
+            if (i % 2 == 0) {
+                fd = fopen("dehumid.data", "wb");
+            }
+            else {
+                fd = fopen("dehumid.data.backup", "wb");
+            }
+            
+            
             fwrite(&data, sizeof(struct Data), 1 , fd);            
             fclose(fd);           
 
