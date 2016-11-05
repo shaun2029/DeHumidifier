@@ -2,7 +2,7 @@
 Dehumidifier controller using Energinie Pi-mote, BME280 sensor and Raspberry Pi.
 
 #Requires: 
-Raspberry Pi (B+/2/3/Zero), BCM280 sensor.
+Raspberry Pi (B+/2/3/Zero), BCM280 sensor breakout board.
 
 #Instructions:
 Connect the BCM280 breakout board to Rapsberry Pi I2C pins:
@@ -29,7 +29,8 @@ Enable i2c support on the Pi using raspi-config (Advanced menu option).
 g++ -O2 DeHumid.cpp Adafruit_BME280.cpp -lbcm2835 -o dehumid 
 
 #Compile dependencies: 
-Raspberry Pi (B+/2/3/Zero), BCM280 sensor, libbcm2835, flot.
+Note: Included in libs folder.
+bcm2835, flot.
 
 # bcm2835:
 http://www.airspayce.com/mikem/bcm2835
