@@ -1,8 +1,10 @@
 #DeHumidifier
 Dehumidifier controller using Energinie Pi-mote, BME280 sensor and Raspberry Pi.
 
+Dehumidifier Control generates a HTML file that can be used to display the results in a graph.
+
 #Requires: 
-Raspberry Pi (B+/2/3/Zero), BCM280 sensor breakout board.
+Raspberry Pi (B+/2/3/Zero), Energinie Pi-mote, BCM280 sensor breakout board.
 
 #Instructions:
 Connect the BCM280 breakout board to Rapsberry Pi I2C pins:
