@@ -15,7 +15,7 @@ Raspberry Pi (B+/2/3/Zero), Energinie Pi-mote, BCM280 sensor breakout board.
 Connect the BCM280 breakout board to Rapsberry Pi I2C pins:
 <table>
     <tr>
-        <th> PI Pin </th><th> BME280 Pin</th>
+        <th> PI GPIO Pin </th><th> BME280 Pin</th>
     </tr>
     <tr>
         <th> 1 (3v3)  </td><td> VCC </td>
@@ -32,12 +32,17 @@ Connect the BCM280 breakout board to Rapsberry Pi I2C pins:
 </table>
 Enable i2c support on the Pi using raspi-config (Advanced menu option).
 
+The application dehumid update the measurements every five minutes. It measures the humidity using a BME280 sensor, and turns on/off the dehumidifier using an Energinie Pi wireless remote and power socket.
+
+The application can generate a HTML file that can be used to display the results in a graph. This uses the javascript Flot library. A template HTML file 'template_results.html' will be used to create a 'results.html' file. The tag <sensordata/> in the template file will be replaced with measurement data.
+
 ##Compile:
 g++ -O2 DeHumid.cpp Adafruit_BME280.cpp -lbcm2835 -o dehumid 
 
 ##Compile dependencies: 
+bcm2835
+
 Note: Included in libs folder.
-bcm2835, flot.
 
 ####bcm2835:
 http://www.airspayce.com/mikem/bcm2835
