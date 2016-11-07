@@ -16,10 +16,11 @@
 
 <sensordata/>
 
-		var data = [
+		var results = [
 			{ data: temprature, label: "Temprature" },
 			{ data: pressure, label: "pressure", yaxis: 2 },
-			{ data: humidity, label: "Humidity", yaxis: 3 }
+			{ data: humidity, label: "Humidity", yaxis: 3 },
+			{ data: dehumidifier, label: "Dehumidifier", yaxis: 4 }
 		];
 
 		var options = {
@@ -42,6 +43,20 @@
 				position: "left",
 				tickFormatter: function(value, axis) {
 					return value.toFixed(axis.tickDecimals) + "%";
+					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+						if (value == 1) {
+							return "On";
+						}
+						else if(value == 0) {
+							return "Off";
+						}
+						else {
+							return "";
+						}
 					}
 				}
 			],
@@ -78,6 +93,20 @@
 				tickFormatter: function(value, axis) {
 					return value.toFixed(axis.tickDecimals) + "%";
 					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+						if (value == 1) {
+							return "On";
+						}
+						else if(value == 0) {
+							return "Off";
+						}
+						else {
+							return "";
+						}
+					}
 				}
 			],
 			legend: { position: "sw" },
@@ -113,6 +142,20 @@
 				tickFormatter: function(value, axis) {
 					return value.toFixed(axis.tickDecimals) + "%";
 					}
+				},
+				{ 
+				position: "right",
+				tickFormatter: function(value, axis) {
+						if (value == 1) {
+							return "On";
+						}
+						else if(value == 0) {
+							return "Off";
+						}
+						else {
+							return "";
+						}
+					}
 				}
 			],
 			legend: { position: "sw" },
@@ -124,24 +167,66 @@
 			}
 		}
 
-		$.plot("#placeholder", data, options);
+        var period = 0;
+        var i = 0,
+            choiceContainer = $("#overviewLegend");
 
-                $("#whole").click(function () {
-			$.plot("#placeholder", data, options)
-		});
+        $.each(results, function(key, val) {
+            val.color = i;
+            ++i;
+            l = val.label;
+            var li = $('<li />').appendTo(choiceContainer);
+            
+            $('<input name="' + l + '" id="' + l + '" type="checkbox" checked="checked" />').appendTo(li);
+            $('<label>', {
+                text: l, 
+                'for': l
+            }).appendTo(li);
+        });
 
-                $("#day").click(function () {
-			$.plot("#placeholder", data, optionsDay)
-		});
+        function plotAccordingToChoices() {
+            var data = [];
 
-                $("#hour").click(function () {
-			$.plot("#placeholder", data, optionsHour)
-		});
+            choiceContainer.find("input:checked").each(function() {
+                var key = this.name;
 
-		$("input").change(function () {
-			options.canvas = $(this).is(":checked");
-			$.plot("#placeholder", data, options);
-		});
+                for (var i = 0; i < results.length; i++) {
+                    if (results[i].label === key) {
+                        data.push(results[i]);
+                        return true;
+                    }
+                }
+            });
+        
+            if (period == 1) {
+                $.plot("#placeholder", data, optionsDay)
+            }
+            else if (period == 2) {
+                $.plot("#placeholder", data, optionsHour)
+            } 
+            else {
+                $.plot($("#placeholder"), data, options);
+            }
+        }
+
+        $("#whole").click(function () {
+            period = 0;
+            plotAccordingToChoices();
+        });
+
+        $("#day").click(function () {
+            period = 1;
+            plotAccordingToChoices();
+        });
+
+        $("#hour").click(function () {
+            period = 2;
+            plotAccordingToChoices();
+        });
+
+
+        plotAccordingToChoices();
+        choiceContainer.find("input").change(plotAccordingToChoices);
 
 		// Add the Flot version string to the footer
 
@@ -160,7 +245,15 @@
 
 		<div class="demo-container">
 			<div id="placeholder" class="demo-placeholder"></div>
+
 		</div>
+        <div id="graph">
+            <div id="placeholder"></div>
+        </div>
+        <div id="miniature">
+            <ul id="overviewLegend">
+            </ul>
+        </div>
 
 		<p>Pressure, temprature and humidity captured by a Raspberry Pi and BME280 sensor. Sudden drops in humidity relate to the dehumidfier on times.</p>
 
@@ -170,7 +263,7 @@
 	</div>
 
 	<div id="footer">
-		Copyright &copy; 2007 - 2014 IOLA and Ole Laursen
+		Copyright &copy; 2016 Shaun Simpson
 	</div>
 
 </body>
