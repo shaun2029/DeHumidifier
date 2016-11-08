@@ -45,7 +45,7 @@
 
 <table>
     <tr>
-        <th> PI Pin </th>
+        <th> PI GPIO Pin </th>
 <th> BME280 Pin</th>
     </tr>
     <tr>
@@ -68,6 +68,10 @@
 
 <p>Enable i2c support on the Pi using raspi-config (Advanced menu option).</p>
 
+<p>The application dehumid update the measurements every five minutes. It measures the humidity using a BME280 sensor, and turns on/off the dehumidifier using an Energinie Pi wireless remote and power socket.</p>
+
+<p>The application can generate a HTML file that can be used to display the results in a graph. This uses the javascript Flot library. A template HTML file 'template_results.html' will be used to create a 'results.html' file. The tag  in the template file will be replaced with measurement data.</p>
+
 <h2>
 <a id="compile" class="anchor" href="#compile" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Compile:</h2>
 
@@ -76,8 +80,9 @@
 <h2>
 <a id="compile-dependencies" class="anchor" href="#compile-dependencies" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Compile dependencies:</h2>
 
-<p>Note: Included in libs folder.
-bcm2835, flot.</p>
+<p>bcm2835</p>
+
+<p>Note: Included in libs folder.</p>
 
 <h4>
 <a id="bcm2835" class="anchor" href="#bcm2835" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>bcm2835:</h4>
