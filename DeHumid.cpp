@@ -149,96 +149,99 @@ static int InitPlugs(void) {
  * "1101 and 0101 socket 3 ON and OFF"
  * "1100 and 0100 socket 4 ON and OFF" */
 
+/* Transmits signal over 1 second period */
 static int SetPlugState(int number, bool state)
 {
-    for (int i=0; i<4; i++) {
-        switch (number) {
-            case 1:
-                if (state) {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, HIGH);
-                }
-                else {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, LOW);
-                }
-                break;
-                
-            case 2:
-                if (state) {
-                    bcm2835_gpio_write(GPIO17, LOW);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, HIGH);
-                }
-                else {
-                    bcm2835_gpio_write(GPIO17, LOW);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, LOW);
-                }
-                break;
-                
-            case 3:
-                if (state) {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, LOW);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, HIGH);
-                }
-                else {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, LOW);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, LOW);
-                }
-                break;
-                
-            case 4:
-                if (state) {
-                    bcm2835_gpio_write(GPIO17, LOW);
-                    bcm2835_gpio_write(GPIO22, LOW);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, HIGH);
-                }
-                else {
-                    bcm2835_gpio_write(GPIO17, LOW);
-                    bcm2835_gpio_write(GPIO22, LOW);
-                    bcm2835_gpio_write(GPIO23, HIGH);
-                    bcm2835_gpio_write(GPIO27, LOW);
-                }
-                break;
-                
-            default:
-               if (state) {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, LOW);
-                    bcm2835_gpio_write(GPIO27, LOW);
-                }
-                else {
-                    bcm2835_gpio_write(GPIO17, HIGH);
-                    bcm2835_gpio_write(GPIO22, HIGH);
-                    bcm2835_gpio_write(GPIO23, LOW);
-                    bcm2835_gpio_write(GPIO27, HIGH);
-                }     
-                break;   
-        }
+    switch (number) {
+        case 1:
+            if (state) {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, HIGH);
+            }
+            else {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, LOW);
+            }
+            break;
+            
+        case 2:
+            if (state) {
+                bcm2835_gpio_write(GPIO17, LOW);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, HIGH);
+            }
+            else {
+                bcm2835_gpio_write(GPIO17, LOW);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, LOW);
+            }
+            break;
+            
+        case 3:
+            if (state) {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, LOW);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, HIGH);
+            }
+            else {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, LOW);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, LOW);
+            }
+            break;
+            
+        case 4:
+            if (state) {
+                bcm2835_gpio_write(GPIO17, LOW);
+                bcm2835_gpio_write(GPIO22, LOW);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, HIGH);
+            }
+            else {
+                bcm2835_gpio_write(GPIO17, LOW);
+                bcm2835_gpio_write(GPIO22, LOW);
+                bcm2835_gpio_write(GPIO23, HIGH);
+                bcm2835_gpio_write(GPIO27, LOW);
+            }
+            break;
+            
+        default:
+           if (state) {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, LOW);
+                bcm2835_gpio_write(GPIO27, LOW);
+            }
+            else {
+                bcm2835_gpio_write(GPIO17, HIGH);
+                bcm2835_gpio_write(GPIO22, HIGH);
+                bcm2835_gpio_write(GPIO23, LOW);
+                bcm2835_gpio_write(GPIO27, HIGH);
+            }     
+            break;   
+    }
         
-        /* let it settle, encoder requires this time. */
-        usleep(100000);
+    /* let it settle, encoder requires this time. */
+    usleep(100000);
+
+    /* Transmitt 3 times to improve reliability. */
+    for (int i=0; i<3; i++) {
 	    /* Enable the modulator */
 	    bcm2835_gpio_write(GPIO25, HIGH);
 	    /* keep enabled for a period */
         usleep(250000);
 	    /* Disable the modulator */
 	    bcm2835_gpio_write(GPIO25, LOW);   
-	    
-	    sleep(1); 
+
+        usleep(50000);
     }
     
 	return 0;	
@@ -260,13 +263,14 @@ parse_date (const char *input, struct tm *tm)
 
 int main(int argc, const char * argv[])
 {
-    bool state = false;
+    bool state = false, lastState = false;
     double maxHumidity = 50;
     double minHumidity = 45;
     struct tm timeStart, timeStop;
     struct Data data;
+    int transmitCount = 0;
 
- 	fprintf(stderr, "DeHumid Version: 1.2.1\n\n");
+ 	fprintf(stderr, "DeHumid Version: 1.2.2\n\n");
     
     timeStart.tm_hour = 23;
     timeStart.tm_min = 30;
@@ -301,6 +305,7 @@ int main(int argc, const char * argv[])
 
         fprintf(stdout, "Testing: \tTurning on ...\n");
         SetPlugState(1, true);
+        sleep(4);
         fprintf(stdout, "Testing: \tTurning off ...\n");
         SetPlugState(1, false);
         return 0;
@@ -338,8 +343,6 @@ int main(int argc, const char * argv[])
    	 	perror("Failed to initialise plug GPIO control.\n");
     	return -1;
    	}
-
-    SetPlugState(1, false);   
 
     bool loadedResults = false;
     FILE *fd;
@@ -418,10 +421,11 @@ int main(int argc, const char * argv[])
     else {
         fprintf(stdout, "Successfully initialised BME280 sensor.\n\n");
     }
-    
-    /* Give sensor some time. */
-    usleep(100000);
-    SetPlugState(1, state);   
+
+    /* Start with plugs off. */    
+    SetPlugState(1, false);  
+    /* Retransmit signal later to ensure that plug group is off. */
+    transmitCount = 10; 
 
     while (true) {
         time_t rawtime;
@@ -447,27 +451,24 @@ int main(int argc, const char * argv[])
         fprintf(stdout, "Humidity = %.2f\n", data.results[i].humidity);
         
         int tMin = timeinfo->tm_hour * 60 + timeinfo->tm_min;
-       
+             
         /* Control if time between Start and Stop */
         if ((tMin >= timeStart.tm_hour*60+timeStart.tm_min) || (tMin < timeStop.tm_hour*60+timeStop.tm_min)) {
             if (data.results[i].humidity > maxHumidity) {
                 if (state != true) {
                     state = true;
-                    SetPlugState(1, state);   
                     fprintf(stdout, "%02d:%02d: Turned ON\n", timeinfo->tm_hour, timeinfo->tm_min);
                 }
             }
             else if (data.results[i].humidity < minHumidity) {
                 if (state != false) {
                     state = false;
-                    SetPlugState(1, state);   
                     fprintf(stdout, "%02d:%02d: Turned OFF\n", timeinfo->tm_hour, timeinfo->tm_min);
                 }
             };
         }
         else if (state) {
             state = false;
-            SetPlugState(1, state);   
             fprintf(stdout, "%02d:%02d: Turned OFF\n", timeinfo->tm_hour, timeinfo->tm_min);
         }
         
@@ -480,7 +481,22 @@ int main(int argc, const char * argv[])
             }
         }
         
-        data.results[i].state = state;
+        if ((lastState) && (!state)) {
+            /* Ensure that plug on times are correct by including the last period. */
+            data.results[i].state = lastState;
+        }
+        else {
+            /* Update plug state field. */
+            data.results[i].state = state;
+        }
+        
+        /* If the state has changed load the re-transmit counter. */
+        if (state != lastState) {
+            transmitCount = 10;
+        }
+        
+        lastState = state;
+
         data.count++;
         
         FILE *fileRead, *fileWrite;
@@ -590,7 +606,18 @@ int main(int argc, const char * argv[])
         fwrite(&data, sizeof(struct Data), 1 , fd);            
         fclose(fd);           
 
-        sleep(LOOP_TIME);
+        if (transmitCount > 0) {
+            /* Re-transmit signal to ensure that plug group is set correctly. */
+            for (int r = 0; r < transmitCount; r++) {  
+                SetPlugState(1, state); 
+                sleep(LOOP_TIME/transmitCount);
+            }
+            
+            transmitCount = 0;
+        }
+        else {
+            sleep(LOOP_TIME);
+        }
     }
     
     return 0;
