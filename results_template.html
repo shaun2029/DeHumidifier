@@ -25,7 +25,10 @@
 
 		var options = {
 			canvas: true,
-			xaxes: [ { mode: "time"	} ],
+			xaxes: [ { mode: "time", 
+				min: (new Date()).getTime() - 10*24*60*60*1000 - 5*60*1000,
+                            max: (new Date()).getTime() - 5*60*1000
+			} ],
 			yaxes: [ {
 				position: "left",
 				alignTicksWithAxis: 1,
