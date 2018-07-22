@@ -270,7 +270,7 @@ int main(int argc, const char * argv[])
     struct Data data;
     int transmitCount = 0;
 
- 	fprintf(stderr, "DeHumid Version: 1.2.2\n\n");
+ 	fprintf(stderr, "DeHumid Version: 1.3.0\n\n");
     
     timeStart.tm_hour = 23;
     timeStart.tm_min = 30;
@@ -601,8 +601,25 @@ int main(int argc, const char * argv[])
         else {
             fd = fopen("dehumid.data.backup", "wb");
         }
-        
-        
+
+/* Re-initialise sensor every 12*looptime = 60 minutes. */
+if (i % 12 == 0) {
+    fprintf(stdout, "\nRe-initialising BME280 sensor ...\n");
+    bool bmeSuccess = bme.begin(BME280_ADDRESS2, "/dev/i2c-1");
+
+    if (bmeSuccess == false) {
+        bmeSuccess = bme.begin(BME280_ADDRESS, "/dev/i2c-1");
+    }
+
+    if (!bmeSuccess) {
+       	fprintf(stderr, "ERROR: Failed to re-initialise BME280 on address 0x76 or 0x77!\n");
+        return 1;
+    }
+    else {
+        fprintf(stdout, "Successfully re-initialised BME280 sensor.\n\n");
+    }
+}
+
         fwrite(&data, sizeof(struct Data), 1 , fd);            
         fclose(fd);           
 
