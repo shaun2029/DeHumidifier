@@ -580,6 +580,10 @@ int main(int argc, const char * argv[])
                         }            
                         fprintf(fileWrite, "];\n");
                     }
+                    else if (strstr(line, "<currentreading/>")) {
+                        fprintf(fileWrite, "var currentreading = [");
+                                fprintf(fileWrite, "[%ld,%f,%f,%f];\n", data.results[d].timestamp, data.results[d].temprature, data.results[d].pressure, data.results[d].humidity);
+                    }
                     else {
                         fprintf(fileWrite, "%s", line); 
                     }
