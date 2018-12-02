@@ -1,7 +1,7 @@
 #DeHumidifier Control
 Dehumidifier controller using Energinie Pi-mote, BME280 sensor and Raspberry Pi. It saves on electricity bills by limiting the use of the dehumidifier/s to only when needed, and optionally during times when electricity is cheaper.
 
-The Raspberry Pi measures the humidity using a [BME280](https://www.sparkfun.com/products/13676) sensor, and turns on/off the dehumidifie/s using a [Energinie](https://energenie4u.co.uk/index.phpcatalogue/product/ENER002-2PI) wireless power socket.
+The Raspberry Pi measures the humidity using a [BME280](https://www.sparkfun.com/products/13676) sensor, and turns on/off the dehumidifier/s using a [Energinie](https://energenie4u.co.uk/index.phpcatalogue/product/ENER002-2PI) wireless power socket.
 
 ####DeHumidifier Control generates a HTML file that can be used to display the results in a graph.
 ![](https://github.com/shaun2029/DeHumidifier/blob/master/docs/Graph.png?raw=true)

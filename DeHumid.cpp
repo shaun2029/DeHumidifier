@@ -582,7 +582,7 @@ int main(int argc, const char * argv[])
                     }
                     else if (strstr(line, "<currentreading/>")) {
                         fprintf(fileWrite, "var currentreading = [");
-                                fprintf(fileWrite, "[%ld,%f,%f,%f];\n", data.results[d].timestamp, data.results[d].temprature, data.results[d].pressure, data.results[d].humidity);
+                                fprintf(fileWrite, "[%ld,%f,%f,%f];\n", data.results[i].timestamp, data.results[i].temprature, data.results[i].pressure, data.results[i].humidity);
                     }
                     else {
                         fprintf(fileWrite, "%s", line); 
@@ -606,23 +606,23 @@ int main(int argc, const char * argv[])
             fd = fopen("dehumid.data.backup", "wb");
         }
 
-/* Re-initialise sensor every 12*looptime = 60 minutes. */
-if (i % 12 == 0) {
-    fprintf(stdout, "\nRe-initialising BME280 sensor ...\n");
-    bool bmeSuccess = bme.begin(BME280_ADDRESS2, "/dev/i2c-1");
+        /* Re-initialise sensor every 12*looptime = 60 minutes. */
+        if (i % 12 == 0) {
+            fprintf(stdout, "\nRe-initialising BME280 sensor ...\n");
+            bool bmeSuccess = bme.begin(BME280_ADDRESS2, "/dev/i2c-1");
 
-    if (bmeSuccess == false) {
-        bmeSuccess = bme.begin(BME280_ADDRESS, "/dev/i2c-1");
-    }
+            if (bmeSuccess == false) {
+                bmeSuccess = bme.begin(BME280_ADDRESS, "/dev/i2c-1");
+            }
 
-    if (!bmeSuccess) {
-       	fprintf(stderr, "ERROR: Failed to re-initialise BME280 on address 0x76 or 0x77!\n");
-        return 1;
-    }
-    else {
-        fprintf(stdout, "Successfully re-initialised BME280 sensor.\n\n");
-    }
-}
+            if (!bmeSuccess) {
+               	fprintf(stderr, "ERROR: Failed to re-initialise BME280 on address 0x76 or 0x77!\n");
+                return 1;
+            }
+            else {
+                fprintf(stdout, "Successfully re-initialised BME280 sensor.\n\n");
+            }
+        }
 
         fwrite(&data, sizeof(struct Data), 1 , fd);            
         fclose(fd);           
