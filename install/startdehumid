@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "Dehumid Control: waiting for IP  ..."
+
+while true; do
+	IP=`ifconfig | grep "inet addr:192.168." | awk '{print $2}' | awk -F ":" '{print $2}'`
+
+	if [ "IP" != "" ]; then
+		echo "Dehumid Control: Starting Dehumid Controller ..."
+		dehumid 56 58 23:30 06:30
+		echo "Dehumid Control: Unexpected death!"
+	fi
+
+	sleep 30
+done
