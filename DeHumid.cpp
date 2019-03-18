@@ -60,6 +60,8 @@
 /* Store two weeks results. */
 #define MAX_RESULTS 4032
 
+#define TRANSMIT_RETRY 6
+
 struct SensorResult {
     int index;
     struct tm time;
@@ -319,10 +321,10 @@ int main(int argc, const char * argv[])
     double minHumidity = 45;
     struct tm timeStart, timeStop;
     struct Data data;
-    int transmitCount = 0;
+    int transmitCount = TRANSMIT_RETRY;
 
- 	fprintf(stderr, "DeHumid Version: 1.3.0\n\n");
-    
+    fprintf(stderr, "DeHumid Version: 1.3.1\n\n");
+
     timeStart.tm_hour = 23;
     timeStart.tm_min = 30;
     timeStop.tm_hour = 6;
@@ -476,7 +478,7 @@ int main(int argc, const char * argv[])
     /* Start with plugs off. */    
     SetPlugState(1, false);  
     /* Retransmit signal later to ensure that plug group is off. */
-    transmitCount = 3; 
+    transmitCount = TRANSMIT_RETRY;
 
     while (true) {
         time_t rawtime;
@@ -531,7 +533,7 @@ int main(int argc, const char * argv[])
                 fprintf(stdout, "%02d:%02d: Total on time: %.1f hours\n", timeinfo->tm_hour, timeinfo->tm_min, data.onTime/3600.0);
             }
         }
-        
+
         if ((lastState) && (!state)) {
             /* Ensure that plug on times are correct by including the last period. */
             data.results[i].state = lastState;
@@ -540,11 +542,12 @@ int main(int argc, const char * argv[])
             /* Update plug state field. */
             data.results[i].state = state;
         }
-        
-        /* Re-transmit counter. */
-        transmitCount = 3;
-        
-        lastState = state;
+
+	if (lastState != state) {
+            /* Re-transmit counter. */
+            transmitCount = TRANSMIT_RETRY;
+            lastState = state;
+	}
 
         data.count++;
         
