@@ -40,6 +40,8 @@
 #include <stdint.h>
 #include <time.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include "bcm2835.h"
 #include "Adafruit_BME280.h"
 
@@ -53,7 +55,7 @@
 #define GPIO25 RPI_V2_GPIO_P1_22
 
 /* Loop time in seconds. */
-#define LOOP_TIME 300
+#define LOOP_TIME 30
 
 /* Store two weeks results. */
 #define MAX_RESULTS 4032
@@ -75,6 +77,56 @@ struct Data {
     struct SensorResult results[MAX_RESULTS];
 } __attribute__((__packed__));
 
+int fdEnr;
+struct flock lockEnr;
+
+int EnerginieAquireLock()
+{
+	char file[] = "/tmp/energine.lock";
+	int err = 0;
+
+	/* Open a file descriptor to the file. */
+	/* Open a file descriptor to the file. */
+  if( access(file, F_OK ) != -1 ) {
+    // file exists
+    fdEnr = open (file, O_WRONLY);
+  } else {
+    // file doesn't exist
+    // Disable umask to set file permissions    
+    mode_t oldmask = umask(0); // needs sys/stat.h
+    fdEnr = open (file, O_WRONLY | O_CREAT, 0666);
+    umask(oldmask);
+  }
+
+	/* Initialize the flock structure. */
+	memset (&lockEnr, 0, sizeof(lockEnr));
+	lockEnr.l_type = F_WRLCK;
+
+	/* Place a write lock on the file. 
+	   Try for upto 5 seconds. */
+	for (int i = 0; i < 100; i++) {
+		err = fcntl (fdEnr, F_SETLK, &lockEnr);
+
+		if (!err) {
+			break;
+		}
+
+		usleep(50000);
+	}
+
+	return err;
+}
+
+int EnerginieReleaseLock()
+{
+	/* Release the lock. */
+	lockEnr.l_type = F_UNLCK;
+	int err = fcntl (fdEnr, F_SETLK, &lockEnr);
+
+	close (fdEnr);
+	return err;
+}
+
 /*
  * "OUT OF THE BOX: Plug the Pi Transmitter board into the Raspberry Pi"
  * "GPIO pin-header ensuring correct polarity and pin alignment."
@@ -86,7 +138,7 @@ struct Data {
  * "For proper set up the sockets should be in their factory state with"
  * "the red led flashing at 1 second intervals. If this is not the case for"
  * "either socket, press and hold the green button on the front of the unit"
- * "for 5 seconds or more until the red light flashes slowly."
+ * "for 10 seconds or more until the red light flashes quickly."
  * ""
  * "A socket in learning mode will be listening for a control code to be"
  * "sent from a transmitter. A socket can pair with up to 2 transmitters"
@@ -113,8 +165,8 @@ static int InitPlugs(void) {
    	 	perror("Failed to map the physical GPIO registers into the virtual memory space.\n");
     	return -1;
     }
-        
-	/* Select the GPIO pins used for the encoder K0-K3 data inputs */
+
+    /* Select the GPIO pins used for the encoder K0-K3 data inputs */
     bcm2835_gpio_fsel(GPIO17, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(GPIO22, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(GPIO23, BCM2835_GPIO_FSEL_OUTP);
@@ -139,7 +191,7 @@ static int InitPlugs(void) {
     bcm2835_gpio_write(GPIO22, LOW);
     bcm2835_gpio_write(GPIO23, LOW);
     bcm2835_gpio_write(GPIO27, LOW);
-    
+
     return 0;
 }
 
@@ -152,6 +204,8 @@ static int InitPlugs(void) {
 /* Transmits signal over 1 second period */
 static int SetPlugState(int number, bool state)
 {
+    EnerginieAquireLock();
+
     switch (number) {
         case 1:
             if (state) {
@@ -167,7 +221,7 @@ static int SetPlugState(int number, bool state)
                 bcm2835_gpio_write(GPIO27, LOW);
             }
             break;
-            
+
         case 2:
             if (state) {
                 bcm2835_gpio_write(GPIO17, LOW);
@@ -182,7 +236,7 @@ static int SetPlugState(int number, bool state)
                 bcm2835_gpio_write(GPIO27, LOW);
             }
             break;
-            
+
         case 3:
             if (state) {
                 bcm2835_gpio_write(GPIO17, HIGH);
@@ -197,7 +251,7 @@ static int SetPlugState(int number, bool state)
                 bcm2835_gpio_write(GPIO27, LOW);
             }
             break;
-            
+
         case 4:
             if (state) {
                 bcm2835_gpio_write(GPIO17, LOW);
@@ -212,7 +266,7 @@ static int SetPlugState(int number, bool state)
                 bcm2835_gpio_write(GPIO27, LOW);
             }
             break;
-            
+
         default:
            if (state) {
                 bcm2835_gpio_write(GPIO17, HIGH);
@@ -225,27 +279,24 @@ static int SetPlugState(int number, bool state)
                 bcm2835_gpio_write(GPIO22, HIGH);
                 bcm2835_gpio_write(GPIO23, LOW);
                 bcm2835_gpio_write(GPIO27, HIGH);
-            }     
-            break;   
+            }
+            break;
     }
-        
+
     /* let it settle, encoder requires this time. */
     usleep(100000);
 
-    /* Transmitt 3 times to improve reliability. */
-    for (int i=0; i<3; i++) {
-	    /* Enable the modulator */
-	    bcm2835_gpio_write(GPIO25, HIGH);
-	    /* keep enabled for a period */
-        usleep(250000);
-	    /* Disable the modulator */
-	    bcm2835_gpio_write(GPIO25, LOW);   
+    /* Enable the modulator */
+    bcm2835_gpio_write(GPIO25, HIGH);
+    /* keep enabled for a period */
+    usleep(250000);
+    /* Disable the modulator */
+    bcm2835_gpio_write(GPIO25, LOW);
+    usleep(50000);
 
-        usleep(50000);
-    }
-    
-	return 0;	
-} 
+    EnerginieReleaseLock();
+    return 0;
+}
  
 static const char *
 parse_date (const char *input, struct tm *tm)
@@ -425,7 +476,7 @@ int main(int argc, const char * argv[])
     /* Start with plugs off. */    
     SetPlugState(1, false);  
     /* Retransmit signal later to ensure that plug group is off. */
-    transmitCount = 10; 
+    transmitCount = 3; 
 
     while (true) {
         time_t rawtime;
@@ -434,7 +485,7 @@ int main(int argc, const char * argv[])
         /* Get the index of the oldest result. */
         int i = data.count % MAX_RESULTS;
         
-        time (&rawtime);
+        ::time(&rawtime);
         timeinfo = localtime (&rawtime);
         fprintf(stdout, "%02d:%02d: ", timeinfo->tm_hour, timeinfo->tm_min);
 
@@ -490,10 +541,8 @@ int main(int argc, const char * argv[])
             data.results[i].state = state;
         }
         
-        /* If the state has changed load the re-transmit counter. */
-        if (state != lastState) {
-            transmitCount = 10;
-        }
+        /* Re-transmit counter. */
+        transmitCount = 3;
         
         lastState = state;
 
@@ -582,7 +631,7 @@ int main(int argc, const char * argv[])
                     }
                     else if (strstr(line, "<currentreading/>")) {
                         fprintf(fileWrite, "var currentreading = [");
-                                fprintf(fileWrite, "[%ld,%f,%f,%f];\n", data.results[i].timestamp, data.results[i].temprature, data.results[i].pressure, data.results[i].humidity);
+                        fprintf(fileWrite, "[%ld,%f,%f,%f]];\n", data.results[i].timestamp, data.results[i].temprature, data.results[i].pressure, data.results[i].humidity);
                     }
                     else {
                         fprintf(fileWrite, "%s", line); 
